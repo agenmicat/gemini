@@ -24,7 +24,7 @@ async function loadGallery() {
             
             // Perbaikan Thumbnail: Ambil dari detik ke-2 agar tidak blank hitam
             // Format: https://customer-<ID>.cloudflarestream.com/<VIDEO_UID>/thumbnails/thumbnail.jpg?time=2s
-            const thumbUrl = `https://customer-${v.uid.split('/')[0]}.cloudflarestream.com/${v.uid}/thumbnails/thumbnail.jpg?time=2s&height=360`;
+            const thumbUrl = `https://customer-${v.uid.split('/')[0]}.cloudflarestream.com/${v.uid}/thumbnails/thumbnail.jpg`;
 
             const autoDesc = `Video arsip momen ${cleanTitle.toLowerCase()} asli.`;
 
