@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Archive Gallery</title>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --text-color: #f1f1f1;
+            --secondary-text: #aaaaaa;
+            --accent: #ff0000;
+            --card-bg: #1c1c1c;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        section { margin-bottom: 50px; }
+        
+        h2 { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-size: 1.5rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        /* --- GRID SYSTEM --- */
+        .grid-shorts {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Lebih kecil untuk vertikal */
+            gap: 15px;
+        }
+
+        .grid-regular {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        /* --- CARD STYLE --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #2a2a2a;
+        }
+
+        .card:hover { transform: translateY(-5px); border-color: #444; }
+
+        .thumb-box { position: relative; width: 100%; background: #222; }
+        
+        /* Ratio untuk masing-masing tipe */
+        .ratio-shorts { aspect-ratio: 9 / 16; }
+        .ratio-regular { aspect-ratio: 16 / 9; }
+
+        .thumb-box img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        .info { padding: 12px; }
+        .info h3 { 
+            font-size: 14px; margin: 0 0 8px 0; 
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        
+        .desc { font-size: 12px; color: var(--secondary-text); line-height: 1.4; }
+        .tags { margin-top: 8px; font-size: 11px; color: #3ea6ff; }
+
+        /* --- MODAL --- */
+        #player-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-content { width: 100%; max-width: 900px; position: relative; }
+        .close-btn { position: absolute; top: -40px; right: 0; color: white; cursor: pointer; font-size: 24px; }
+
+        @media (max-width: 600px) {
+            .grid-shorts { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="section-shorts">
+        <h2>📱 Shorts & Vertikal</h2>
+        <div class="grid-shorts" id="container-shorts"></div>
+    </section>
+
+    <section id="section-reguler">
+        <h2>🎬 Video Reguler</h2>
+        <div class="grid-regular" id="container-reguler"></div>
+    </section>
+</div>
+
+<div id="player-modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closePlayer()">✕ Tutup</span>
+        <div id="video-wrapper"></div>
+    </div>
+</div>
+
+<script>
+    const WORKER_URL = 'https://YOUR_WORKER_URL.workers.dev';
+
+    async function loadGallery() {
+        try {
+            const res = await fetch(WORKER_URL);
+            const data = await res.json();
+            const videos = data.result;
+
+            const shortsCont = document.getElementById('container-shorts');
+            const regulerCont = document.getElementById('container-reguler');
+
+            videos.forEach(v => {
+                const title = v.meta.name || "Untitled Video";
+                const isShorts = v.input.width < v.input.height;
+                
+                // --- LOGIC GENERATE METADATA ---
+                const autoDesc = `Video arsip ${title.toLowerCase()}`;
+                const autoTags = title.split(' ')
+                                    .filter(word => word.length > 3)
+                                    .map(word => `#${word.toLowerCase()}`)
+                                    .join(' ');
+
+                const cardHTML = `
+                    <div class="card" onclick="playVideo('${v.uid}', ${isShorts})">
+                        <div class="thumb-box ${isShorts ? 'ratio-shorts' : 'ratio-regular'}">
+                            <img src="${v.thumbnail}" loading="lazy">
+                        </div>
+                        <div class="info">
+                            <h3>${title}</h3>
+                            <p class="desc">${autoDesc}</p>
+                            <div class="tags">${autoTags}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (isShorts) {
+                    shortsCont.innerHTML += cardHTML;
+                } else {
+                    regulerCont.innerHTML += cardHTML;
+                }
+            });
+        } catch (e) { console.error("Gagal load:", e); }
+    }
+
+    function playVideo(uid, isShorts) {
+        const modal = document.getElementById('player-modal');
+        const wrapper = document.getElementById('video-wrapper');
+        
+        // Atur ukuran player di modal sesuai tipe video
+        const ratio = isShorts ? "aspect-ratio: 9/16; max-width: 400px; margin: auto;" : "aspect-ratio: 16/9;";
+        
+        wrapper.innerHTML = `
+            <iframe src="https://iframe.videodelivery.net/${uid}" 
+                style="border:none; width:100%; height:100%; ${ratio}" 
+                allowfullscreen></iframe>`;
+        
+        modal.style.display = 'flex';
+    }
+
+    function closePlayer() {
+        document.getElementById('player-modal').style.display = 'none';
+        document.getElementById('video-wrapper').innerHTML = '';
+    }
+
+    loadGallery();
+</script>
+
+</body>
+</html>
