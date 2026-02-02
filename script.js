@@ -22,20 +22,23 @@ async function loadGallery() {
             const cleanTitle = cleanMyTitle(v.meta.name || "Untitled Video");
             const isShorts = v.input.width < v.input.height;
             
-            // Perbaikan Thumbnail: Ambil dari detik ke-2 agar tidak blank hitam
-            // Format: https://customer-<ID>.cloudflarestream.com/<VIDEO_UID>/thumbnails/thumbnail.jpg?time=2s
-            const thumbUrl = `https://customer-${v.uid.split('/')[0]}.cloudflarestream.com/${v.uid}/thumbnails/thumbnail.jpg`;
-
+            // Auto generate deskripsi & tags
             const autoDesc = `Video arsip momen ${cleanTitle.toLowerCase()} asli.`;
+            const autoTags = cleanTitle.split(' ')
+                                .filter(word => word.length > 3)
+                                .map(word => `#${word.toLowerCase()}`)
+                                .join(' ');
 
             const cardHTML = `
-                <div class="card" onclick="playVideo('${v.uid}', '${cleanTitle}', '${autoDesc}', ${isShorts})">
+                <div class="card" onclick="playVideo('${v.uid}', '${cleanTitle}', '${autoDesc}')">
                     <div class="thumb-box ${isShorts ? 'ratio-shorts' : 'ratio-regular'}">
-                        <img src="${thumbUrl}" alt="${cleanTitle}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x225?text=Loading+Thumb...'">
+                        <img src="${v.thumbnail}" alt="${cleanTitle}" loading="lazy">
                     </div>
                     <div class="info">
                         <h3>${cleanTitle}</h3>
-                        </div>
+                        <p class="desc">${autoDesc}</p>
+                        <div class="tags">${autoTags}</div>
+                    </div>
                 </div>
             `;
 
@@ -50,27 +53,18 @@ async function loadGallery() {
     }
 }
 
-function playVideo(uid, title, desc, isShorts) {
+// 4. FUNGSI PUTAR VIDEO & UPDATE SEO
+function playVideo(uid, title, desc) {
+    // Update SEO Meta
     document.title = `${title} | My Gallery`;
     document.getElementById('meta-desc').setAttribute('content', desc);
 
     const modal = document.getElementById('player-modal');
     const wrapper = document.getElementById('video-wrapper');
     
-    // Atur lebar modal khusus untuk shorts agar tidak terlalu lebar kesamping
-    const modalContent = document.querySelector('.modal-content');
-    if (isShorts) {
-        modalContent.style.maxWidth = "450px";
-        modalContent.style.height = "90vh";
-    } else {
-        modalContent.style.maxWidth = "1100px";
-        modalContent.style.height = "auto";
-        modalContent.style.aspectRatio = "16/9";
-    }
-
     wrapper.innerHTML = `
-        <iframe src="https://iframe.videodelivery.net/${uid}?autoplay=true" 
-            allow="autoplay; encrypted-media; fullscreen;" 
+        <iframe src="https://iframe.videodelivery.net/${uid}" 
+            style="border:none; width:100%; height:100%; aspect-ratio: inherit;" 
             allowfullscreen></iframe>`;
     
     modal.style.display = 'flex';
